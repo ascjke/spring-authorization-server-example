@@ -1,10 +1,7 @@
 package ru.borisov.sas.example.jsso.config;
 
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -17,10 +14,15 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import ru.borisov.sas.example.jsso.utils.JwkUtils;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
+@Log4j2
 @RequiredArgsConstructor
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -44,26 +46,36 @@ public class AuthorizationServerConfig {
                         .clientName("Test Client")
                         .clientId("test-client")
                         .clientSecret("{noop}test-client")
-                        .redirectUri("http://localhost:5000/code")
+                        .redirectUri("http://127.0.0.1:8080/code")
+                        .scope("read.scope")
+                        .scope("write.scope")
                         .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                         .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                         .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                        .tokenSettings(TokenSettings.builder()
+                                .accessTokenFormat(OAuth2TokenFormat.REFERENCE)
+                                .accessTokenTimeToLive(Duration.of(5, ChronoUnit.MINUTES))
+                                .refreshTokenTimeToLive(Duration.of(120, ChronoUnit.MINUTES))
+                                .reuseRefreshTokens(false)
+                                .authorizationCodeTimeToLive(Duration.of(30, ChronoUnit.SECONDS))
+                                .build())
                         .build()
         );
     }
 
-    @Bean
-    public JWKSource<SecurityContext> jwkSource() {
-        RSAKey rsaKey = JwkUtils.generateRsa();
-        JWKSet jwkSet = new JWKSet(rsaKey);
-        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
-    }
+//    @Bean
+//    public JWKSource<SecurityContext> jwkSource() {
+//        RSAKey rsaKey = JwkUtils.generateRsa();
+//        JWKSet jwkSet = new JWKSet(rsaKey);
+//        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+//    }
 
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
                 .issuer(authorizationServerProperties.getIssuerUrl())
+                .tokenIntrospectionEndpoint(authorizationServerProperties.getIntrospectionEndpoint())
                 .build();
     }
 }

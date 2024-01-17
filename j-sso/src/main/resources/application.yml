@@ -16,3 +16,9 @@ spring:
     oauth2:
       authorizationserver:
         issuer-url: http://localhost:7777
+        introspection-endpoint: /oauth2/token-info
+      client:
+        registration:
+          github:
+            clientId: 9cb36bab7d2455172363
+            clientSecret: a54ef676e8990361e35074d08625801d2fe5e2cb
